@@ -1,0 +1,29 @@
+body, html{
+    margin:0;
+    background-color:#e8cebf;
+    color:#4f4846;
+    font-family: fantasy;
+}
+
+h1, h2, h3, h4{
+    padding-left:20px;
+    margin:10px 0;
+}
+
+#title{
+    background-color:#fdf8f5;
+    padding: 10px;
+}
+
+a:link{
+    color:#4f4846;
+    text-decoration: none;
+}
+
+a:visited{
+    color:#4f4846;
+}
+
+a:hover{
+    color:#266150;
+}
