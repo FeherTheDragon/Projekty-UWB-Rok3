@@ -1,0 +1,182 @@
+import java.util.Random;
+
+public class Zad3 {
+    static int ilosc_pacjentow = 10;
+    static int ilosc_lozek = 5;
+    static int ilosc_respiratorow = 2;
+    static Szpital szpital;
+
+    public static void main(String[] args) {
+        szpital = new Szpital(ilosc_lozek, ilosc_respiratorow, ilosc_pacjentow);
+        for(int i = 0; i < ilosc_pacjentow; i++){
+            new Pacjent(i, 1500, szpital).start();
+        }
+    }
+}
+
+class Pacjent extends Thread{
+    // stany
+    static int POCZEKALNIA = 1;
+    static int LECZENIE = 2;
+    static int RESPIRATOR = 3;
+    static int OZDROWIENIE = 4;
+    static int ZGON = 5;
+    static int OZDROWIENIE_RESPIRATOR = 6;
+
+    static int PILNA_POMOC = 300;
+
+    static int ZGON_NIE_PRZYJETO_NA_ODDZIAL = 10;
+    static int ZGON_ZABRAKLO_RESPIRATOROW = 11;
+
+    // zmienne
+    int indeks;
+    int postep_leczenia;
+    int stan;
+    Szpital s;
+    Random rand = new Random();
+    int zdrowie;
+
+    Pacjent(int indeks, int postep_leczenia, Szpital s){
+        this.indeks = indeks;
+        this.postep_leczenia = postep_leczenia;
+        this.stan = POCZEKALNIA;
+        this.s = s;
+        this.zdrowie = postep_leczenia;
+    }
+
+    public void run(){
+        while(true){
+            if(stan == POCZEKALNIA){
+                if(rand.nextInt(2)==1) {
+                    System.out.println("Pacjent #" + indeks + ". Proszę o przyjęcie mnie na oddział.");
+                    stan = s.recepcja(indeks);
+                } else {
+                    System.out.println("Długa kolejka, muszę jeszcze poczekać.");
+                    postep_leczenia -= rand.nextInt(500);
+                    if(postep_leczenia < PILNA_POMOC){
+                        s.zgon(ZGON_NIE_PRZYJETO_NA_ODDZIAL, indeks);
+                        break;
+                    } else try{
+                        sleep(rand.nextInt(1000));
+                    } catch(Exception e){}
+                }
+            }
+            else if(stan == LECZENIE){
+                postep_leczenia -= rand.nextInt(500);
+                System.out.println("Pacjent #" + indeks + ". Leczenie trwa.");
+                if(postep_leczenia < PILNA_POMOC){
+                    System.out.println("Pacjent #" + indeks + ". Potrzebna respiracja!!!");
+                    stan = s.respiracja();
+                } else if(rand.nextInt(10) < 3){
+                    stan = OZDROWIENIE;
+                } else try{
+                    sleep(rand.nextInt(1000));
+                } catch(Exception e){}
+            }
+            else if(stan == RESPIRATOR){
+                System.out.println("Pacjent #" + indeks + ". Podłączony pod respirator. Ratowanie życia.");
+                try{
+                    sleep(rand.nextInt(5000) + 3000);
+                } catch(Exception e){}
+                System.out.println("Pacjent #" + indeks + ". Uratowano życie. Zwalnianie respiratora.");
+                stan = OZDROWIENIE_RESPIRATOR;
+            }
+            else if (stan == OZDROWIENIE){
+                System.out.println("Pacjent #" + indeks + " wyzdrowiał.");
+                postep_leczenia = zdrowie;
+                stan = s.wypis(OZDROWIENIE, indeks);
+            }
+            else if (stan == OZDROWIENIE_RESPIRATOR){
+                System.out.println("Pacjent #" + indeks + " wyzdrowiał.");
+                postep_leczenia = zdrowie;
+                stan = s.wypis(OZDROWIENIE_RESPIRATOR, indeks);
+            }
+            else if(stan == ZGON){
+                System.out.println("Pacjent #" + indeks + ". Brak wolnego respiratora.");
+                s.zgon(ZGON_ZABRAKLO_RESPIRATOROW, indeks);
+                break;
+            }
+        }
+    }
+}
+
+class Szpital{
+    // stany
+    static int POCZEKALNIA = 1;
+    static int LECZENIE = 2;
+    static int RESPIRATOR = 3;
+    static int OZDROWIENIE = 4;
+    static int ZGON = 5;
+    static int OZDROWIENIE_RESPIRATOR = 6;
+
+    static int ZGON_NIE_PRZYJETO_NA_ODDZIAL = 10;
+    static int ZGON_ZABRAKLO_RESPIRATOROW = 11;
+
+    int ilosc_lozek;
+    int ilosc_zajetych_lozek;
+    int ilosc_respiratorow;
+    int ilosc_zajetych_respiratorow;
+    int ilosc_pacjentow;
+
+    Szpital(int ilosc_lozek, int ilosc_respiratorow, int ilosc_pacjentow){
+        this.ilosc_lozek = ilosc_lozek;
+        this.ilosc_respiratorow = ilosc_respiratorow;
+        this.ilosc_pacjentow = ilosc_pacjentow;
+        this.ilosc_zajetych_lozek = 0;
+        this.ilosc_zajetych_respiratorow = 0;
+    }
+
+    synchronized int recepcja(int indeks){
+        try{
+            Thread.currentThread().sleep(1000);
+        } catch(Exception ie){}
+
+        if(ilosc_zajetych_lozek < ilosc_lozek){
+            ilosc_zajetych_lozek++;
+            System.out.println("Przyjęto pacjenta #" + indeks + ", zajętych łożek: " + ilosc_zajetych_lozek + "/" + ilosc_lozek);
+            return LECZENIE;
+        } else {
+            System.out.println("Brak wolnych łóżek, proszę czekać w kolejce!");
+            return POCZEKALNIA;
+        }
+    }
+
+    synchronized int respiracja(){
+        try{
+            Thread.currentThread().sleep(1000);
+        } catch(Exception ie){}
+
+        if(ilosc_zajetych_respiratorow < ilosc_respiratorow){
+            ilosc_zajetych_respiratorow++;
+            System.out.println("Zajęto respirator. Zajętych respiratorów: " + ilosc_zajetych_respiratorow + "/" + ilosc_respiratorow);
+            return RESPIRATOR;
+        } else {
+            System.out.println("Brak respiratorów. Pacjent umiera.");
+            return ZGON;
+        }
+    }
+
+    synchronized void zgon(int powod, int indeks){
+        ilosc_pacjentow--;
+        if(powod == ZGON_NIE_PRZYJETO_NA_ODDZIAL){
+            System.out.println("<<ZGON>> Pacjent #" + indeks + " umarł. Zabrakło łóżek w szpitalu.");
+        } else if(powod == ZGON_ZABRAKLO_RESPIRATOROW){
+            ilosc_zajetych_lozek--;
+            System.out.println("<<ZGON>> Pacjent #" + indeks + " umarł. Zabrakło respiratorów" + ". Ilość zajętych łóżek: " + ilosc_zajetych_lozek + "/" + ilosc_lozek);
+        } else{
+            System.out.println("<<ZGON>> Powód zgonu nieznany");
+        }
+    }
+
+    synchronized int wypis(int powod, int indeks){
+        ilosc_zajetych_lozek--;
+        if(powod == OZDROWIENIE){
+            System.out.println("Pacjent #" + indeks + " wyzdrowiał, zwalnianie łóżka. Ilość zajętych łóżek: " + ilosc_zajetych_lozek + "/" + ilosc_lozek);
+        }
+        else if(powod == OZDROWIENIE_RESPIRATOR){
+            ilosc_zajetych_respiratorow--;
+            System.out.println("Pacjent #" + indeks + " wyzdrowiał, zwalnianie respiratora. Zajętych respiratorów: " + ilosc_zajetych_respiratorow + "/" + ilosc_respiratorow + ". Ilość zajętych łóżek: " + ilosc_zajetych_lozek + "/" + ilosc_lozek);
+        }
+        return POCZEKALNIA;
+    }
+}

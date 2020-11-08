@@ -1,0 +1,209 @@
+import java.util.InputMismatchException;
+import java.util.Random;
+import java.util.Scanner;
+import java.util.concurrent.Semaphore;
+
+public class Zad2{
+
+    public static void main(String[]args){
+
+// wybór wariantu
+        System.out.println("Proszę wybrać wariant do uruchomienia: ");
+        System.out.println("Wariant 1. - Problem ucztujących filozofów");
+        System.out.println("Wariant 2. - Problem ucztujących filozofów z niesymetrycznym sięganiem po widelce");
+        System.out.println("Wariant 3. - Problem ucztujących filozofów z rzutem monetą");
+
+        int wariant = 0;
+        Scanner sc = new Scanner(System.in);
+        try{
+            wariant = sc.nextInt();
+            if(wariant < 1 || wariant > 3) throw new IllegalArgumentException();
+        } catch (IllegalArgumentException iae){
+            System.out.println("Niewłaściwy wariant. Proszę wpisać 1, 2 lub 3!");
+        } catch (InputMismatchException ime){
+            System.out.println("Nie podano wartości liczbowej. Proszę wpisać 1, 2 lub 3!");
+        }
+
+// wybór liczby filozofów
+        System.out.println("Proszę podać liczbę filozofów w symulacji (zakres 2 - 100)");
+
+        int liczba_filozofow = 0;
+        try{
+            liczba_filozofow = sc.nextInt();
+            if(wariant < 2 || wariant > 100) throw new IllegalArgumentException();
+        } catch (IllegalArgumentException iae){
+            System.out.println("Liczba z poza zakresu. Proszę wybrać liczbę z zakresu 2 - 100!");
+        } catch (InputMismatchException ime){
+            System.out.println("Nie podano wartości liczbowej.");
+        }
+
+// aktywacja wybranego programu
+        Semaphore[] widelec = new Semaphore[liczba_filozofow];
+
+        switch(wariant){
+            case 0:
+                System.out.println("Nie podano wariantu");
+                break;
+            case 1:
+                for(int i = 0; i < liczba_filozofow; i++){
+                    widelec[i] = new Semaphore(1);
+                }
+                for(int i = 0; i < liczba_filozofow; i++){
+                    new Filozof1(i, liczba_filozofow, widelec).start();
+                }
+                break;
+            case 2:
+                for(int i = 0; i < liczba_filozofow; i++){
+                    widelec[i] = new Semaphore (1 ) ;
+                }
+                for(int i = 0; i < liczba_filozofow; i++){
+                    new Filozof2(i, liczba_filozofow, widelec).start();
+                }
+                break;
+            case 3:
+                for(int i = 0; i < liczba_filozofow; i++){
+                    widelec[i] = new Semaphore(1);
+                }
+                for(int i = 0; i < liczba_filozofow; i++){
+                    new Filozof3(i, liczba_filozofow, widelec).start();
+                }
+                break;
+        }
+
+    }
+}
+
+
+class Filozof1 extends Thread{
+
+    int MAX;
+    Semaphore[] widelec;
+    int mojNum;
+
+    public Filozof1(int nr, int MAX, Semaphore[] widelec) {
+        mojNum = nr;
+        this.MAX = MAX;
+        this.widelec = widelec;
+    }
+
+    public void run() {
+        while (true) {
+// myslenie
+            System.out.println("Mysle ¦ " + mojNum);
+            try {
+                Thread.sleep((long) (7000 * Math.random()));
+            } catch (InterruptedException e) {
+            }
+
+            widelec[mojNum].acquireUninterruptibly(); //przechwycenie L widelca
+            widelec[(mojNum + 1) % MAX].acquireUninterruptibly(); //przechwycenie P widelca
+// jedzenie
+            System.out.println("Zaczyna jesc " + mojNum);
+            try {
+                Thread.sleep((long) (5000 * Math.random()));
+            } catch (InterruptedException e) {
+            }
+
+            System.out.println("Konczy jesc " + mojNum);
+            widelec[mojNum].release(); //zwolnienie L widelca
+            widelec[(mojNum + 1) % MAX].release(); //zwolnienie P widelca
+        }
+    }
+}
+
+class Filozof2 extends Thread {
+
+    int MAX;
+    Semaphore[] widelec;
+    int mojNum;
+
+    public Filozof2(int nr, int MAX, Semaphore[] widelec) {
+        mojNum = nr;
+        this.MAX = MAX;
+        this.widelec = widelec;
+    }
+
+    public void run(){
+        while(true){
+// myslenie
+            System.out.println("Mysle ¦ " + mojNum);
+            try {
+                Thread.sleep((long) (5000 * Math.random()));
+            } catch (InterruptedException e) {
+            }
+            if (mojNum == 0) {
+                widelec[(mojNum + 1) % MAX].acquireUninterruptibly();
+                widelec[mojNum].acquireUninterruptibly();
+            } else {
+                widelec[mojNum].acquireUninterruptibly();
+                widelec[(mojNum + 1) % MAX].acquireUninterruptibly();
+            }
+
+// jedzenie
+            System.out.println("Zaczyna jesc " + mojNum);
+            try {
+                Thread.sleep((long) (3000 * Math.random()));
+            } catch (InterruptedException e) {
+            }
+            System.out.println("Konczy jesc " + mojNum);
+            widelec[mojNum].release();
+            widelec[(mojNum + 1) % MAX].release();
+        }
+    }
+}
+
+class Filozof3 extends Thread {
+
+    int MAX;
+    Semaphore[] widelec;
+    int mojNum;
+    Random losuj;
+
+    public Filozof3(int nr, int MAX, Semaphore[] widelec) {
+        mojNum = nr;
+        this.MAX = MAX;
+        this.widelec = widelec;
+        losuj = new Random(mojNum);
+    }
+    public void run(){
+        while(true){
+// myslenie
+            System.out.println ( "Mysle ¦ " + mojNum) ;
+            try {
+                Thread.sleep ( ( long ) (5000 * Math.random( ) ) ) ;
+            } catch ( InterruptedException e ) {
+            }
+
+            int strona = losuj.nextInt ( 2 ) ;
+            boolean podnioslDwaWidelce = false ;
+
+            do {
+                if ( strona == 0) {
+                    widelec [mojNum].acquireUninterruptibly ( ) ;
+                    if( ! ( widelec [ (mojNum+1)%MAX].tryAcquire ( ) ) ) {
+                        widelec[mojNum].release ( ) ;
+                    } else {
+                        podnioslDwaWidelce = true ;
+                    }
+                } else {
+                    widelec[(mojNum+1)%MAX].acquireUninterruptibly ( ) ;
+                    if ( ! (widelec[mojNum].tryAcquire ( ) ) ) {
+                        widelec[(mojNum+1)%MAX].release ( ) ;
+                    } else {
+                        podnioslDwaWidelce = true ;
+                    }
+                }
+
+            } while(podnioslDwaWidelce == false);
+
+            System.out.println ( "Zaczyna jesc "+mojNum) ;
+            try {
+                Thread.sleep ( ( long ) (3000 * Math.random( ) ) ) ;
+            } catch ( InterruptedException e ) {
+            }
+            System.out.println ( "Konczy jesc "+mojNum) ;
+            widelec [mojNum].release ( ) ;
+            widelec [ (mojNum+1)%MAX].release ( ) ;
+        }
+    }
+}
