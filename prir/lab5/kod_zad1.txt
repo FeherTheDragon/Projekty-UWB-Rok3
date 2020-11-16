@@ -1,0 +1,33 @@
+#include <stdio.h>
+
+main(){
+	int y(int x){
+		return 4 * x * x - 6 * x + 5;
+	}
+
+	int p = 5; //procesy
+    	int i, j;
+	double n, xp, xk, dx;
+
+	for(i = 0; i < p; i++){
+		if (fork() == 0){
+			srand(time(NULL)^(getpid()));
+
+			xp = rand() % 20 + 1;
+			xk = rand() % 20 + 1 + xp;
+			n = rand() % 10 + 1;
+
+			dx = (xk - xp) / n;
+			double calka = 0;
+			
+			for(j = 1; j < n; j++){
+				calka += y(xp + j * dx);
+			}
+			calka += (y(xp) + y(xk)) / 2;
+			calka *= dx;
+			printf("a = %f, b = %f, n = %f, calka wynosi %f\n", xp, xk, n, calka);
+			exit(0);
+		}
+	}
+}
+
