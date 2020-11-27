@@ -1,0 +1,128 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <time.h>
+#include "mpi.h"
+
+#define TANKUJ 5000
+#define REZERWA 500
+#define ZAJEZDNIA 1
+#define KURS_START 2
+#define KURSUJE 3
+#define KURS_STOP 4
+#define AWARIA 5
+
+int paliwo = 1000;
+int DO_ZAJEZDNI = 1;
+int KURSUJ = 0;
+
+int liczba_procesow;
+int nr_procesu;
+
+int ilosc_busow;
+int ilosc_miejsc_w_zajezdni = 3;
+int ilosc_zajetych_miejsc = 0;
+
+int tag = 100;
+int wyslij[2];
+int odbierz[2];
+MPI_Status mpi_status;
+
+void Wyslij(int nr_busa, int stan){
+	wyslij[0] = nr_busa;
+	wyslij[1] = stan;
+	MPI_Send(&wyslij, 2, MPI_INT, 0, tag, MPI_COMM_WORLD);
+	sleep(1);
+}
+
+void Zajezdnia(int liczba_procesow){
+	int nr_busa, status;
+	ilosc_busow = liczba_procesow - 1;
+	
+	while(ilosc_miejsc_w_zajezdni <= ilosc_busow){
+		MPI_Recv(&odbierz, 2, MPI_INT, MPI_ANY_SOURCE, tag, MPI_COMM_WORLD, &mpi_status);
+		nr_busa = odbierz[0];
+		status = odbierz[1];
+		if(status == 1){ printf("Bus nr. %d czeka w zajezdni\n", nr_busa); }
+		if(status == 2){
+			printf("Bus nr. %d rozpoczyna kurs\n", nr_busa);
+			ilosc_zajetych_miejsc--;
+		}
+		if(status == 3){ printf("Bus nr. %d kursuje\n", nr_busa); }
+		if(status == 4){
+			if(ilosc_zajetych_miejsc < ilosc_miejsc_w_zajezdni){
+				ilosc_zajetych_miejsc++;
+				MPI_Send(&DO_ZAJEZDNI, 1, MPI_INT, nr_busa, tag, MPI_COMM_WORLD);
+			} else { MPI_Send(&KURSUJ, 1, MPI_INT, nr_busa, tag, MPI_COMM_WORLD); }
+		}
+		if(status == 5){
+			ilosc_busow--;
+			printf("Ilosc busow %d\n", ilosc_busow);
+		}
+	}
+	
+	printf("Koniec\n");
+}
+
+void Bus(){
+	int stan, suma, i;
+	stan = KURSUJE;
+	
+	while(1){
+		if(stan == 1){
+			if(rand()%2 == 1){
+				stan = KURS_START;
+				paliwo = TANKUJ;
+				printf("Oczekuje w zajezdni - %d\n", nr_procesu);
+				Wyslij(nr_procesu, stan);
+			}	
+			else{ Wyslij(nr_procesu, stan); }
+		}
+		else if(stan == 2){
+			printf("Rozpoczalem kurs - %d\n", nr_procesu);
+			stan = KURSUJE;
+			Wyslij(nr_procesu, stan);
+		}
+		else if(stan == 3){
+			paliwo -= rand()%100;
+			if(paliwo <= REZERWA){
+				stan = KURS_STOP;
+				printf("Bus nr. %d musi zakonczyc kurs\n", nr_procesu);
+				Wyslij(nr_procesu, stan);
+			} else {
+				for(i = 0; rand()%10000; i++);
+			}
+		}
+		else if(stan == 4){
+			int temp;
+			MPI_Recv(&temp, 1, MPI_INT, 0, tag, MPI_COMM_WORLD, &mpi_status);
+			if(temp == DO_ZAJEZDNI){
+				stan = ZAJEZDNIA;
+				printf("Bus nr. %d zajechal do zajezdni\n", nr_procesu);
+			}
+			else {
+				paliwo -= rand()%100;
+				if(paliwo > 0){
+					Wyslij(nr_procesu, stan);
+				} else {
+					stan = AWARIA;
+					printf("Bus nr. %d - awaria silnika!!!\n", nr_procesu);
+					Wyslij(nr_procesu, stan);
+				}
+			}
+		}
+	}
+}
+
+int main(int argc, char *argv[]){
+	MPI_Init(&argc, &argv);
+	MPI_Comm_rank(MPI_COMM_WORLD, &nr_procesu);
+	MPI_Comm_size(MPI_COMM_WORLD, &liczba_procesow);
+	srand(time(NULL));
+	
+	if(nr_procesu == 0){ Zajezdnia(liczba_procesow); }
+	else{ Bus(); }
+		
+	MPI_Finalize();
+	return 0;
+}
