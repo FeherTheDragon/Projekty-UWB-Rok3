@@ -1,0 +1,47 @@
+# metoda prostokątów
+
+def integrate(function, a, b, i):
+    dx = (b - a) / i
+    integr = 0
+    for x in range(i):
+        x = x * dx + a
+        integr += dx * eval(function)
+    return integr
+
+functio1n = input("Funkcja: ")
+a = float(input("Początek przedziału: "))
+b = float(input("Koniec przedziału: "))
+i = int(input("Liczba podprzedziałów"))
+print("Całka z funkcji {funkcjon} po przedziale od {a} do {b} = {integrate}".format(funkcjon = function, a = a, b = b, integrate = integrate(function, a, b, i)))
+
+# metoda trapezów
+
+def integrate(function, a, b, i):
+    dx = (b - a) / i
+    integr = 0
+    for x in range(i):
+        x = x * dx + a
+        fx1 = eval(function)
+        x += dx
+        fx2 = eval(function)
+        integr += 0.5 * dx * (fx1 + fx2)
+    return integr
+
+function = input("Funkcja: ")
+a = float(input("Początek przedziału: "))
+b = float(input("Koniec przedziału: "))
+i = int(input("Liczba podprzedziałów: "))
+print("Całka z funkcji {funkcjon} po przedziale od {a} do {b} = {integrate}".format(funkcjon = function, a = a, b = b, integrate = integrate(function, a, b, i)))
+
+# metoda Simpsona
+
+def simpson_integration_simple(my_func, a, b, n):
+    delta_x = (b-a)/n
+    total = 0
+    for i in range(0, n, 2):
+        x = a + delta_x * 2 * i
+        total += delta_x * (my_func(x) + 4 * my_func(x + delta_x) + my_func(x + 2 * delta_x)) / 3
+    return total
+
+integral = simpson_integration_simple(lambda x: x**2, 0.0, 1.0, 100)
+integral
